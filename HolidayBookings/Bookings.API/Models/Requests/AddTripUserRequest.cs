@@ -5,10 +5,7 @@ namespace Bookings.API.Models.Requests
 {
     public class AddTripUserRequest
     {
-        [Required]
-        public int userId { get; set; }
-
-        [property: EnumDataType(typeof(TripRole))]
+        public required int UserId { get; set; }
         public TripRole Role { get; set; }
     }
 }

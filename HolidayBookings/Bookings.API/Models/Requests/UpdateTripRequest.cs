@@ -4,16 +4,8 @@ namespace Bookings.API.Models.Requests
 {
     public class UpdateTripRequest
     {
-        [Required]
-        public int Id { get; set; }
-
-        [property: Required, StringLength(320)]
         public required string Name { get; set; }
-
-        [Required]
-        public int MaxParticipants { get; set; }
-
-        [Required]
-        public bool Live { get; set; }
+        public required int MaxParticipants { get; set; }
+        public required bool Live { get; set; }
     }
 }

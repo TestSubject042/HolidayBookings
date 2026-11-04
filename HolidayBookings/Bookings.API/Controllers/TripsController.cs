@@ -1,7 +1,7 @@
-﻿using Azure.Core;
-using Bookings.API.Models.Requests;
+﻿using Bookings.API.Models.Requests;
 using Bookings.API.Models.Responses;
 using Bookings.API.Services;
+using Bookings.API.Services.Interfaces;
 using Bookings.Data.Entities;
 using Bookings.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -16,11 +16,11 @@ namespace Bookings.API.Controllers
     [Route("trips")]
     public class TripsController : ControllerBase
     {
-        private readonly TripService _tripService;
-        private readonly UserService _userService;
+        private readonly ITripService _tripService;
+        private readonly IUserService _userService;
         private int CurrentUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-        public TripsController(TripService tripService, UserService userService)
+        public TripsController(ITripService tripService, IUserService userService)
         {
             _tripService = tripService;
             _userService = userService;
@@ -112,7 +112,7 @@ namespace Bookings.API.Controllers
 
         // DELETE /trips/5
         [HttpDelete("{tripId:int}")]
-        public async Task<IActionResult> Delete(int tripId, UpdateTripRequest request)
+        public async Task<IActionResult> Delete(int tripId)
         {
             var denied = await RequireOrganizerAsync(tripId);
             if (denied is not null) return denied;
@@ -120,7 +120,7 @@ namespace Bookings.API.Controllers
             var trip = await _tripService.GetTripAsync(tripId);
             if (trip is null) return NotFound();
 
-            await _tripService.UpdateTripAsync(trip, request);
+            await _tripService.DeleteTripAsync(trip);
 
             return NoContent();
         }
@@ -131,7 +131,7 @@ namespace Bookings.API.Controllers
         {
             var trip = await _tripService.CreateAsync(request, CurrentUserId);
 
-            return CreatedAtAction(nameof(Create), new { tripId = trip.Id },
+            return CreatedAtAction(nameof(Get), new { tripId = trip.Id },
                 new TripResponse{
                     Id = trip.Id,
                     Name = trip.Name,
@@ -147,21 +147,22 @@ namespace Bookings.API.Controllers
             // If the user being added to the trip is not the logged in user,
             // or the trip role is not a customer
             // then the user must be an organiser of the trip
-            if (request.userId != CurrentUserId || request.Role != TripRole.Customer)
+            if (request.UserId != CurrentUserId || request.Role != TripRole.Customer)
             {
                 var denied = await RequireOrganizerAsync(tripId);
                 if (denied is not null) return denied;
             }
 
-            var user = await _userService.GetUserAsync(request.userId);
+            var user = await _userService.GetUserAsync(request.UserId);
 
-            if (user is null) return NotFound($"User with id {request.userId} not found");    //User not found
+            if (user is null) return NotFound($"User with id {request.UserId} not found");    //User not found
 
-            var alreadyOnTrip = await _tripService.UserOnTripAsync(tripId, request.userId);
+            var alreadyOnTrip = await _tripService.UserOnTripAsync(tripId, request.UserId);
             if (alreadyOnTrip) return Conflict("That user is already associated with this trip.");
 
-            
-            return CreatedAtAction(nameof(AddTripUser), new { tripId });
+            await _tripService.AddUserAsync(tripId, request.UserId, request.Role);
+
+            return CreatedAtAction(nameof(Get), new { tripId });
         }
 
         // DELETE /trips/5/tripUser/10

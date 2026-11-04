@@ -1,13 +1,13 @@
 using Bookings.Data;
 using Bookings.Data.Entities;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
+using Bookings.API.Extensions;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddDataLayer(builder.Configuration);
+builder.Services.AddApplicationServices();
 builder.Services.AddAuthorization();
 builder.Services
     .AddIdentityApiEndpoints<User>(o =>

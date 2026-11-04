@@ -1,5 +1,5 @@
-﻿using Azure.Core;
-using Bookings.API.Models.Requests;
+﻿using Bookings.API.Models.Requests;
+using Bookings.API.Services.Interfaces;
 using Bookings.Data;
 using Bookings.Data.Entities;
 using Bookings.Data.Enums;
@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bookings.API.Services
 {
-    public class TripService 
+    public class TripService : ITripService
     {
         private readonly BookingsDbContext _db;
         public TripService(BookingsDbContext db) => _db = db;
@@ -47,7 +47,8 @@ namespace Bookings.API.Services
 
         public async Task RemoveUserAsync(int tripId, int userId)
         {
-            var target = _db.Set<UserTrip>().First(ut => ut.TripId == tripId && ut.UserId == userId);
+            var target = await _db.Set<UserTrip>()
+                .FirstOrDefaultAsync(ut => ut.TripId == tripId && ut.UserId == userId);
 
             if (target is not null)
             {
@@ -59,7 +60,9 @@ namespace Bookings.API.Services
         public async Task<List<UserTrip>> GetUserTripsAsync(int userId)
         {
             var trips = await _db.Set<UserTrip>()
-                .Where(p => p.UserId == userId)
+                .Include(ut => ut.Trip)
+                .Where(ut => ut.UserId == userId)
+                .AsNoTracking()
                 .ToListAsync();
 
             return trips;
@@ -73,20 +76,20 @@ namespace Bookings.API.Services
         public async Task<List<Trip>> GetLiveTripsAsync()
         {
             var trips = await _db.Set<Trip>()
+                .Include(t => t.Destinations)
                 .Where(t => t.Live)
+                .AsNoTracking()
                 .ToListAsync();
 
             return trips;
         }
 
-        public async Task<Trip> GetTripAsync(int tripId)
+        public async Task<Trip?> GetTripAsync(int tripId)
         {
-            var trips = await _db.Set<Trip>()
+            return await _db.Set<Trip>()
                 .Include(t => t.Destinations)
                 .Include(t => t.TripUsers)
-                .FirstAsync(t => t.Id == tripId);
-
-            return trips;
+                .FirstOrDefaultAsync(t => t.Id == tripId);
         }
 
         public async Task UpdateTripAsync(Trip trip, UpdateTripRequest request)

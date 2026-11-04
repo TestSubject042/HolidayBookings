@@ -1,10 +1,10 @@
-﻿using Bookings.Data;
+﻿using Bookings.API.Services.Interfaces;
+using Bookings.Data;
 using Bookings.Data.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace Bookings.API.Services
 {
-    public class UserService
+    public class UserService : IUserService
     {
         private readonly BookingsDbContext _db;
         public UserService(BookingsDbContext db) => _db = db;
